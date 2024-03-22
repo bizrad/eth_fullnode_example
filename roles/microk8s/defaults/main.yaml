@@ -1,0 +1,12 @@
+microk8s_plugins:
+  dns: true
+  ingress: true
+  hostpath-storage: true # never use this on clusters with multiple nodes
+  helm3: true
+  helm: true
+  cert-manager: true
+
+# Other possible plugins
+#  host-access: true https://microk8s.io/docs/addon-host-access
+#  rbac: true
+#  metrics-server: false # used for autoscaling

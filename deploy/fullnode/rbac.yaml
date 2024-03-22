@@ -1,0 +1,122 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: default-execution-layer
+  labels:
+    app.kubernetes.io/name: execution
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: default-consensus-layer
+  labels:
+    app.kubernetes.io/name: beacon
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: default-execution-layer
+  labels:
+    app.kubernetes.io/name: execution
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: default-execution-layer
+subjects:
+  - kind: ServiceAccount
+    name: execution-layer
+    namespace: ethnode
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: default-consensus-layer
+  labels:
+    app.kubernetes.io/name: beacon
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: default-consensus-layer
+subjects:
+  - kind: ServiceAccount
+    name: consensus-layer
+    namespace: ethnode
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: execution-layer
+  labels:
+    app.kubernetes.io/name: execution
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: consensus-layer
+  labels:
+    app.kubernetes.io/name: beacon
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: execution-layer
+  labels:
+    app.kubernetes.io/name: execution
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: execution-layer
+subjects:
+  - kind: ServiceAccount
+    name: execution-layer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: consensus-layer
+  labels:
+    app.kubernetes.io/name: beacon
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: consensus-layer
+subjects:
+  - kind: ServiceAccount
+    name: consensus-layer

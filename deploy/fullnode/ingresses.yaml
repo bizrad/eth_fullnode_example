@@ -1,0 +1,38 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: execution-layer
+  namespace: ethnode
+  labels:
+    app.kubernetes.io/name: execution
+  annotations:
+    kubernetes.io/ingress.class: public
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  rules:
+    - host: 192.168.0.1.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: execution-layer
+                port:
+                  number: 8545 # http-rpc
+  tls:
+    - hosts:
+        - 192.168.0.1.nip.io
+      secretName: tls-example
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-ingress-tcp-microk8s-conf
+  namespace: ingress
+data:
+  8545: "ethnode/execution-layer:8545"
+
+# TODO nginx daemonset needed port added as well

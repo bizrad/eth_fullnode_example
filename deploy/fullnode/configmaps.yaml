@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metrics-exporter
+  labels:
+    app.kubernetes.io/name: metrics-exporter
+data:
+  config.yaml: |-
+    consensus:
+      enabled: true
+      name: consensus-client
+      url: 'http://consensus-layer:5052'
+    execution:
+      enabled: true
+      modules:
+      - eth
+      - net
+      - web3
+      name: execution-client
+      url: 'http://execution-layer:8545'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: execution-layer
+  labels:
+    app.kubernetes.io/name: execution
+data:
+  geth.toml: |
+    [Node.P2P]
+    DialRatio = 3

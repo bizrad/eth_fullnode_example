@@ -1,0 +1,162 @@
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: execution-layer
+  labels:
+    app.kubernetes.io/name: execution
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: execution
+  serviceName: execution-layer-headless
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: execution
+    spec:
+      serviceAccountName: execution-layer
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      initContainers:
+        - name: init-nodeport
+          image: "lachlanevenson/k8s-kubectl:v1.25.4"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - sh
+            - -c
+            - >
+              export EXTERNAL_PORT=$(kubectl get services -l "pod in (${POD_NAME})" -n ethnode -o jsonpath='{.items[0].spec.ports[0].nodePort}');
+              export EXTERNAL_IP=$(kubectl get nodes "${NODE_NAME}" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}');
+              echo "EXTERNAL_PORT=$EXTERNAL_PORT" >  /env/init-nodeport;
+              echo "EXTERNAL_IP=$EXTERNAL_IP"     >> /env/init-nodeport;
+              cat /env/init-nodeport;
+          volumeMounts:
+            - name: env-nodeport
+              mountPath: /env
+        - name: init-chown-data
+          image: "busybox:1.34.0"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          command: ["chown", "-R", "10001:10001", "/data"]
+          volumeMounts:
+            - name: storage
+              mountPath: "/data"
+      containers:
+        - name: geth
+          image: "ethereum/client-go:stable"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -ac
+            - >
+              . /env/init-nodeport;
+              exec geth
+              --datadir=/data
+              --config=/config/geth.toml
+              --nat=extip:$EXTERNAL_IP
+              --port=$EXTERNAL_PORT
+              --http
+              --http.addr=0.0.0.0
+              --http.port=8545
+              --http.vhosts=*
+              --http.corsdomain=*
+              --ws
+              --ws.addr=0.0.0.0
+              --ws.port=8545
+              --ws.origins=*
+              --authrpc.jwtsecret=/data/jwt.hex
+              --authrpc.addr=0.0.0.0
+              --authrpc.port=8551
+              --authrpc.vhosts=*
+              --metrics
+              --metrics.addr=0.0.0.0
+              --metrics.port=6060
+          volumeMounts:
+            - name: env-nodeport
+              mountPath: /env
+            - name: storage
+              mountPath: "/data"
+            - name: jwt
+              mountPath: "/data/jwt.hex"
+              subPath: jwt.hex
+              readOnly: true
+            - name: config
+              mountPath: "/config"
+              readOnly: true
+          ports:
+            - name: p2p-tcp
+              containerPort: 31000
+              protocol: TCP
+            - name: p2p-udp
+              containerPort: 31000
+              protocol: UDP
+            - name: http-rpc
+              containerPort: 8545
+              protocol: TCP
+            - name: ws-rpc
+              containerPort: 8545
+              protocol: TCP
+            - name: auth-rpc
+              containerPort: 8551
+              protocol: TCP
+            - name: metrics
+              containerPort: 6060
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 60
+            periodSeconds: 120
+            tcpSocket:
+              port: http-rpc
+          readinessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            tcpSocket:
+              port: http-rpc
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+      terminationGracePeriodSeconds: 300
+      volumes:
+        - name: jwt
+          secret:
+            secretName: execution-layer-jwt
+        - name: env-nodeport
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: execution-layer
+  volumeClaimTemplates:
+  - metadata:
+      name: storage
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: "1Gi"
+      storageClassName: hc-volume100493370

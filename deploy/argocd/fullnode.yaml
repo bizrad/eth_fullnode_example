@@ -1,0 +1,28 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fullnode
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bizrad/eth_fullnode_example.git
+    path: deploy/fullnode
+    targetRevision: HEAD
+  destination:
+    namespace: ethnode
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
+      - CreateNamespace=true
+#  ignoreDifferences:
+#  # Ignore any changes by the autoscaler
+#  - group: apps
+#    kind: Deployment
+#    jsonPointers:
+#      - /spec/replicas

@@ -1,0 +1,23 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dashboards
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/bizrad/eth_fullnode_example.git
+    path: deploy/grafana_dashboards
+    targetRevision: HEAD
+  destination:
+    namespace: observe
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - RespectIgnoreDifferences=true
+      - CreateNamespace=true
+

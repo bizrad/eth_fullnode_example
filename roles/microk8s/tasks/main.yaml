@@ -1,0 +1,60 @@
+---
+- name: Install microk8s
+  community.general.snap:
+    name: microk8s
+    classic: true
+    channel: 1.28/stable
+
+- name: Wait for microk8s to start
+  command: microk8s.status --wait-ready
+  changed_when: false
+  register: microk8s_status
+  failed_when: microk8s_status.rc > 0
+
+- name: Create kubectl alias
+  command: "snap alias microk8s.kubectl kubectl"
+  changed_when: false
+
+- name: get microk8s addons status
+  ansible.builtin.shell: |
+    microk8s.start && microk8s.status --format yaml
+  args:
+    executable: /bin/bash
+  changed_when: false
+  register: microk8s_addon_status
+  check_mode: false
+
+- name: set current state fact
+  set_fact:
+    microk8s_addon_status: "{{ microk8s_addon_status.stdout | from_yaml }}"
+
+- name: enable microk8s addons
+  loop: "{{ microk8s_addon_status.addons }}"
+  loop_control:
+    label: "{{ item.name }}"
+  command:
+    cmd: microk8s.enable {{ item.name }}{% if microk8s_plugins[item.name] != True %}:{{ microk8s_plugins[item.name] }}{% endif %}
+  when:
+    - item.status == 'disabled'
+    - item.name in microk8s_plugins
+    - microk8s_plugins[item.name]
+
+- name: disable addons
+  become: yes
+  loop: "{{ microk8s_addon_status.addons }}"
+  loop_control:
+    label: "{{ item.name }}"
+  command:
+    cmd: microk8s.disable {{ item.name }}
+  when:
+    - item.status == 'enabled'
+    - item.name in microk8s_plugins
+    - not microk8s_plugins[item.name]
+
+- name: Enable node port on full range
+  ansible.builtin.lineinfile:
+    path: /var/snap/microk8s/current/args/kube-apiserver
+    regexp: '^--service-node-port-range='
+    line: '--service-node-port-range=0-65535'
+  notify: restart_microk8s
+

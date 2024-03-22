@@ -1,0 +1,6 @@
+---
+- name: restart_microk8s
+  ansible.builtin.shell: |
+    microk8s.stop && microk8s.start
+  args:
+    executable: /bin/bash

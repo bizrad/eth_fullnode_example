@@ -1,0 +1,9 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: hc-volume100493370
+provisioner: microk8s.io/hostpath
+reclaimPolicy: Delete
+parameters:
+  pvDir: /mnt/HC_Volume_100493370
+volumeBindingMode: WaitForFirstConsumer

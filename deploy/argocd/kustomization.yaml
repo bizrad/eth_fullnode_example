@@ -9,7 +9,8 @@ resources:
   - self-manage-app.yaml       # GitOps self-management of this directory
   - dev-cluster.yaml           # Dev cluster object
   - kube-prometheus-stack.yaml # observability stack
-#  - grafana-dashboards.yaml    # grafana dashboards
-#  - geth.yaml                  # https://github.com/ethereum/go-ethereum
-
+  - grafana-dashboards.yaml    # grafana dashboards
+  - fullnode.yaml              # full eth node deployment
+#  - cert-manager.yaml          # cert-manager cluster issuer
+#  - local-mount-storage.yaml   # local storage class
 

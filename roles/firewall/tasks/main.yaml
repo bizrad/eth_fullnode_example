@@ -1,0 +1,61 @@
+---
+### FIREWALL SETUP ###
+- name: Allow SSH connections
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Rate limit SSH connections to prevent brute force
+  community.general.ufw:
+    rule: limit
+    port: ssh
+    proto: tcp
+
+- name: Allow access to tcp ports
+  loop: "{{ allowed_tcp_ports }}"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+
+- name: Allow access to udp ports
+  loop: "{{ allowed_udp_ports }}"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: udp
+
+- name: allow rule for microk8s in vxlan.calico
+  community.general.ufw:
+    rule: allow
+    interface: vxlan.calico
+    direction: in
+
+- name: allow rule for microk8s out vxlan.calico
+  community.general.ufw:
+    rule: allow
+    interface: vxlan.calico
+    direction: out
+
+- name: allow rule for microk8s in cali+
+  community.general.ufw:
+    rule: allow
+    interface: cali+
+    direction: in
+
+- name: allow rule for microk8s out cali+
+  community.general.ufw:
+    rule: allow
+    interface: cali+
+    direction: out
+
+#- name: allow routed traffic
+#  community.general.ufw:
+#    rule: allow
+#    direction: routed
+
+# TODO needed to run `ufw default allow routed` by hand
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled

@@ -1,0 +1,66 @@
+---
+- name: Bootstrap eth node
+  hosts: all
+  gather_facts: true
+  become: false
+  remote_user: root
+  pre_tasks:
+    - name: Fail if not Ubuntu
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Ubuntu'
+          - ansible_distribution_version is version('20.04', '>=')
+        fail_msg: "OS is not supported!"
+      tags:
+        - always
+    ### INSTALL DEPENDENCIES ###
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - ufw
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg
+        - jq
+        - dbus-user-session
+        - snapd
+
+  tasks:
+    - name: run firewall role
+      ansible.builtin.include_role:
+        name: firewall
+      vars:
+        allowed_tcp_ports:
+          - 80
+          - 9000
+          - 31000
+          - 8545
+        allowed_udp_ports:
+          - 9000
+          - 31000
+
+    - name: run microk8s install role
+      ansible.builtin.include_role:
+        name: microk8s
+
+    - name: install argocd
+      ansible.builtin.shell: |
+        (kubectl create namespace argocd || echo "namespace exists") && 
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.10.4/manifests/install.yaml && 
+        touch /tmp/argocd_installed
+      args:
+        # Only install argo might upgrade itself in the future if set up to self-upgrade
+        creates: /tmp/argocd_installed
+        executable: /bin/bash
+
+    - name: Apply argocd using kubectl
+      ansible.builtin.shell: "kubectl apply -n argocd -f https://raw.githubusercontent.com/bizrad/eth_fullnode_example/main/deploy/argocd/self-manage-app.yaml"
+      args:
+        # Only install argo might upgrade itself in the future if set up to self-upgrade
+        creates: /tmp/argocd_self_managed_app_installed
