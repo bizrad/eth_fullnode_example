@@ -66,3 +66,28 @@ http://localhost:8080
 http://localhost:8080/d/M2TT9Su7z/ethereum-metrics-exporter-single
 
 http://localhost:8080/d/ddgd7oddnhreob/node-exporter-nodes?orgId=1&refresh=30s
+
+# Decisions
+* Bootstraping the node with ansible as this is a good way to ensure a repeatable setup.
+* Deploying the software with kubernetes as this is a fun relevant example and I'm familiar with it.
+* using `ufw` firewall as this is the default tool for ubuntu
+* using microk8s as this is a lightweight k8s distribution that is easy to install and use
+
+## Ethereum Node Software
+Using [geth aka go-ethereum](https://github.com/ethereum/go-ethereum) because it has fewer issues, more commits, and more stars on github than Nethermind. 
+This is an arbitrary decision without much thought put into it, but it indicates geth might be more mature.
+Also went with lighthouse as it seemed the most popular and less likely to have issues. 
+
+# Ways to improve
+* In a production environment with different monitoring available on a host level
+[microk8s in strict mode](https://microk8s.io/docs/strict-confinement) might be interesting for sandboxing.
+* `ufw` might not be the best firewall, evaluate if other options are better.
+* review microk8s security and hardening options
+* Use something like Traefik for ingress to allow more flexibility with alternate ports
+
+# Shortcuts
+These were done to not commit the ip address to a public repo or work around issues
+* nginx ingress is manually configured due to needing to forward a non-standard port
+* ingress object is manually deployed to avoid exposing data in a public repo
+* secrete manually deployed as we don't have a secret manager
+* manually made ufw rules based on microk8s docs, these open things up a lot
